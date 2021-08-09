@@ -4,6 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import time
+import csv
 
 
 # Set up Chrome Driver & load webpage
@@ -20,31 +21,50 @@ privacyok = driver.find_element_by_xpath('//button[@class="evidon-banner-acceptb
 cities = driver.find_elements_by_css_selector(".geo_name [href]")
 links = [city.get_attribute('href') for city in cities]
 
-# Loop through the links
-for link in links:
-    time.sleep(3)
+# Open CSV Writer and create csv file
+with open('rest_data.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
 
-    driver.get(link)
+    all_res = []
+    veg_res = []
 
-    # Get total number of restaurants in the city
-    all_restaurants = []
-    city_restaurants = driver.find_element_by_xpath('//*[@id="component_36"]/div[1]/div[1]/div[2]/span[1]/span/span').text
-    all_restaurants.append(city_restaurants)
-    print(city_restaurants)
+    # Parse all city ranks
+    ranking = []
+    for rank in driver.find_elements_by_class_name("geo_rank"):
+        ranking.append([rank.text])
 
-    # Filter for vegan options
-    vegan = driver.find_element_by_xpath('.//*[@id="component_48"]/div/div[9]/div[2]/div[2]/div/label/div/span/span').click()
+    # Parse all city names
+    cities = []
+    for city in driver.find_elements_by_class_name("geo_name"):
+        cities.append(city.text.split()[:-1])
 
-   # Wait for page to load
-    time.sleep(3)
+    # Loop through the links
+    for link in links:
+        time.sleep(1)
 
-    # Get total number of restaurants offering vegan options
-    vegan_restaurants = []
-    filtered_result = driver.find_element_by_xpath('.//*[@id="component_36"]/div[1]/div[1]/div/span[1]/span/span').text
-    vegan_restaurants.append(filtered_result)
-    print(filtered_result)
+        driver.get(link)
 
-    # Return to main webpage
-    driver.back()
+        # Get total number of restaurants in the city
+        for res in driver.find_elements_by_xpath('//*[@id="component_36"]/div[1]/div[1]/div[2]/span[1]/span/span'):
+            all_res.append([res.text])
 
+        # Filter for vegan options
+        vegan = driver.find_element_by_xpath('.//*[@id="component_48"]/div/div[9]/div[2]/div[2]/div/label/div/span/span').click()
+
+        # Wait for page to load
+        time.sleep(3)
+
+        # Get total number of restaurants offering vegan options
+        for veg in driver.find_elements_by_xpath('.//*[@id="component_36"]/div[1]/div[1]/div/span[1]/span/span'):
+            veg_res.append([veg.text])
+
+        # Return to main webpage
+        driver.back()
+
+    # Write data to file
+    writer.writerows(zip(ranking, cities, all_res, veg_res))
+
+# Close webdriver 
 driver.quit()
+
+print('Open rest_data.csv for results.')
